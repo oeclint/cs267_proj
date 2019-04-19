@@ -2,8 +2,9 @@
 #include <algorithm>
 #include <iterator>
 #include <cmath>
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include "SpectralClustering.h"
+#include <iostream>
 
 int main() {
     std::vector<int> items = {1,2,3,4,5,6,7,8,9,10};

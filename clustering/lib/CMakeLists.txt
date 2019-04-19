@@ -12,8 +12,17 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 
-find_package(Eigen2 REQUIRED)
-include_directories(${Eigen2_INCLUDE_DIR})
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+#find_package(Eigen2 REQUIRED)
+#include_directories(${Eigen2_INCLUDE_DIR})
+
+#include_directories(${CMAKE_SOURCE_DIR}/../lib)
+INCLUDE_DIRECTORIES ( "$ENV{Eigen3_INCLUDE_DIR}" )
+#link_directories(${CMAKE_SOURCE_DIR}/../build/lib/)
+
+#find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+#add_executable (example example.cpp)
+#target_link_libraries (example clustering)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
@@ -35,6 +44,7 @@ add_library (${LIB_NAME} SHARED ${LIB_PUBLIC_HEADERS} ${LIB_SOURCES})
 
 install(
     TARGETS ${LIB_NAME}
+    ARCHIVE DESTINATION lib${LIB_SUFFIX}
     LIBRARY DESTINATION lib${LIB_SUFFIX}
 )
 
@@ -43,7 +53,7 @@ install(
 #    ARCHIVE DESTINATION lib${LIB_SUFFIX}
 #)
 
-install(
-    FILES ${LIB_PUBLIC_HEADERS}
-    DESTINATION include/${LIB_NAME}
-)
+#install(
+#    FILES ${LIB_PUBLIC_HEADERS}
+#    DESTINATION include/${LIB_NAME}
+#)

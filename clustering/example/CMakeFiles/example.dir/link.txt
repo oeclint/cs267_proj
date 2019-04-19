@@ -1,1 +1,1 @@
-/opt/cray/pe/craype/2.5.15/bin/CC   -O2 -g -DNDEBUG   CMakeFiles/example.dir/example.cpp.o  -o example  -L/global/homes/a/asrikant/cs267_proj/clustering/example/../build/lib -lclustering -Wl,-rpath,/global/homes/a/asrikant/cs267_proj/clustering/example/../build/lib 
+/opt/cray/pe/craype/2.5.15/bin/CC      CMakeFiles/example.dir/example.cpp.o  -o example  -L/global/homes/o/oeclint/project/cs267_proj/clustering/example/../lib/lib -lclustering -Wl,-rpath,/global/homes/o/oeclint/project/cs267_proj/clustering/example/../lib/lib 
