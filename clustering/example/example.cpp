@@ -11,6 +11,7 @@ int main() {
 
     // generate similarity matrix
     unsigned int size = items.size();
+    unsigned int numClusters = 2;
     Eigen::MatrixXd m = Eigen::MatrixXd::Zero(size,size);
 
     for (unsigned int i=0; i < size; i++) {
@@ -25,12 +26,11 @@ int main() {
 
     // the number of eigenvectors to consider. This should be near (but greater) than the number of clusters you expect. Fewer dimensions will speed up the clustering
     int numDims = size;
-
     // do eigenvalue decomposition
     SpectralClustering* c = new SpectralClustering(m, numDims);
 
     // whether to use auto-tuning spectral clustering or kmeans spectral clustering
-    bool autotune = true;
+    bool autotune = false;
 
     std::vector<std::vector<int> > clusters;
     if (autotune) {
@@ -38,7 +38,6 @@ int main() {
         clusters = c->clusterRotate();
     } else {
         // how many clusters you want
-        int numClusters = 5;
         clusters = c->clusterKmeans(numClusters);
     }
 
