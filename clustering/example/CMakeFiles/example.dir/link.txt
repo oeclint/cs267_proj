@@ -1,1 +1,0 @@
-/opt/cray/pe/craype/2.5.15/bin/CC      CMakeFiles/example.dir/example.cpp.o  -o example  -L/global/homes/o/oeclint/project/cs267_proj/clustering/example/../lib/lib -lclustering -Wl,-rpath,/global/homes/o/oeclint/project/cs267_proj/clustering/example/../lib/lib 
