@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import argparse
+import matplotlib.pyplot as plt
 
 def create_points(error, num_samples):
     if os.path.isfile('points.txt'):
@@ -14,8 +15,8 @@ def create_points(error, num_samples):
         with open('points.txt', 'a+') as f:
             for j in range(num_samples // 2):
                 f.write(str(round(points_x[j], 4)) + '\t' + str(round(points_y[j], 4)) + '\t' + str(i-1) + '\n')
-        #plt.scatter(points_x, points_y)
-        #plt.show()
+#        plt.scatter(points_x, points_y)
+#        plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description = "Create points")

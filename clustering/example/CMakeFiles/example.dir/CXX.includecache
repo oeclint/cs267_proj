@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../lib/SpectralClustering.h
+vector
+-
+Eigen/Core
+-
+
+/global/homes/a/asrikant/cs267_proj/clustering/example/example.cpp
+vector
+-
+algorithm
+-
+iterator
+-
+cmath
+-
+eigen3/Eigen/Core
+-
+SpectralClustering.h
+/global/homes/a/asrikant/cs267_proj/clustering/example/SpectralClustering.h
+

@@ -1,0 +1,3 @@
+/global/homes/a/asrikant/cs267_proj/clustering/example/CMakeFiles/edit_cache.dir
+/global/homes/a/asrikant/cs267_proj/clustering/example/CMakeFiles/rebuild_cache.dir
+/global/homes/a/asrikant/cs267_proj/clustering/example/CMakeFiles/example.dir
