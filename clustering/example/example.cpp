@@ -30,7 +30,7 @@ int main() {
     SpectralClustering* c = new SpectralClustering(m, numDims);
 
     // whether to use auto-tuning spectral clustering or kmeans spectral clustering
-    bool autotune = true;
+    bool autotune = false;
 
     std::vector<std::vector<int> > clusters;
     if (autotune) {
@@ -38,7 +38,7 @@ int main() {
         clusters = c->clusterRotate();
     } else {
         // how many clusters you want
-        int numClusters = 5;
+        int numClusters = 4;
         clusters = c->clusterKmeans(numClusters);
     }
 
