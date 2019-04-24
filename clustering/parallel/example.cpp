@@ -9,8 +9,8 @@
 #include "SpectralClustering.h"
 #include <iostream>
 #include <fstream>
+#include "common.h"
 
-inline int min( int a, int b ) { return a < b ? a : b; }
 using namespace std;
 
 double calculate_similarity(double a1, double a2, double b1, double b2) {
@@ -20,7 +20,7 @@ double calculate_similarity(double a1, double a2, double b1, double b2) {
 int main( int argc, char **argv )
 {
     std::vector<double> points;
-    std::ifstream file("points.txt");
+    std::ifstream file("points_large.txt");
     std::string line;
 
     while (std::getline(file, line)) {
@@ -47,6 +47,7 @@ int main( int argc, char **argv )
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    double simulation_time = read_timer( );
   
     int count = nrows / n_proc;
     int remainder = nrows % n_proc;
@@ -64,17 +65,28 @@ int main( int argc, char **argv )
      
     std::cout << rank << " " << start << " " << stop << std::endl;  
 
-    double *local_sim_mat = (double*) malloc( (stop - start + 1) * ncols *  sizeof(double) );
+    long local_size = (stop - start + 1) * ncols;
+    double *local_sim_mat = (double*) malloc( local_size * sizeof(double) );
     int row = 0;
     int col = 0;
     for(int i=2*start; i<=2*stop; i+=2){
         for(int j=0; j<nrows*2; j+=2){
-            local_sim_mat[row * ncols + col]= calculate_similarity(points[i], points[i+1], points[j], points[j+1]);
+            long cur_pos = row*ncols + col;
+            if(cur_pos >= local_size){   
+                std::cout << rank << ": " << cur_pos << "/" << local_size << std::endl;
+            }
+            local_sim_mat[cur_pos] = calculate_similarity(points[i], points[i+1], points[j], points[j+1]);
             col++;
         }
+        col = 0;
         row++;
     }
 
-    MPI_Finalize( );
+    simulation_time = read_timer( ) - simulation_time;
+  
+    if (rank == 0) {  
+      printf( "n = %d, simulation time = %g seconds \n", nrows, simulation_time);
+    } 
+    MPI_Finalize( ); 
     return 0;
 }
