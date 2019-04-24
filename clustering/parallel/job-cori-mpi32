@@ -8,4 +8,4 @@
 #SBATCH -e mpi32.%j.error
 
 #srun -N 32 -n 32 ./mpi -n 500 -o mpi.txt  # adjust -n here as well
-srun -n 12 -N 12 ./example -p 12 -n 500 -no -s mpi.txt
+srun -n 12 -N 12 ./example

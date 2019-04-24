@@ -14,7 +14,7 @@ double calculate_similarity(std::pair<double, double> a, std::pair<double, doubl
 
 int main() {
     std::vector<std::pair<double, double> > points;
-    std::ifstream file("test_points.txt");
+    std::ifstream file("points.txt");
     std::string line;
 
     while (std::getline(file, line)) {
@@ -37,11 +37,11 @@ int main() {
     double similarity;
     for (unsigned int i=0; i < size; i++) {
         for (unsigned int j=0; j < size; j++) {
-            if (i == j) similarity = 0;
-            else {
+            //if (i == j) similarity = 0;
+            //else {
             // generate similarity
             similarity = calculate_similarity(points[i], points[j]);
-            }
+            //}
             //std::cout << similarity << std::endl;
             m(i,j) = similarity;
             m(j,i) = similarity;
