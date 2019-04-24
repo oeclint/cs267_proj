@@ -19,8 +19,9 @@ double calculate_similarity(double a1, double a2, double b1, double b2) {
 
 int main( int argc, char **argv )
 {
+    char *filename = read_string( argc, argv, "-f", NULL );
     std::vector<double> points;
-    std::ifstream file("points_large.txt");
+    std::ifstream file(filename);
     std::string line;
 
     while (std::getline(file, line)) {
@@ -63,8 +64,6 @@ int main( int argc, char **argv )
         stop = start + (count - 1);
     }
      
-    std::cout << rank << " " << start << " " << stop << std::endl;  
-
     long local_size = (stop - start + 1) * ncols;
     double *local_sim_mat = (double*) malloc( local_size * sizeof(double) );
     int row = 0;
@@ -72,9 +71,6 @@ int main( int argc, char **argv )
     for(int i=2*start; i<=2*stop; i+=2){
         for(int j=0; j<nrows*2; j+=2){
             long cur_pos = row*ncols + col;
-            if(cur_pos >= local_size){   
-                std::cout << rank << ": " << cur_pos << "/" << local_size << std::endl;
-            }
             local_sim_mat[cur_pos] = calculate_similarity(points[i], points[i+1], points[j], points[j+1]);
             col++;
         }
