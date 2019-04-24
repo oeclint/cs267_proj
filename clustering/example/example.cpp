@@ -12,13 +12,10 @@ double calculate_similarity(std::pair<double, double> a, std::pair<double, doubl
     return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 1000);
 }
 
-int main() {
+int main(int argc, char **argv) {
     std::vector<std::pair<double, double> > points;
-<<<<<<< HEAD
-    std::ifstream file("large_points.txt");
-=======
-    std::ifstream file("points.txt");
->>>>>>> d3c6215a772efd8b0412c34bf9131a3d4dca7fac
+    char *filename = read_string(argc, argv, "-f", NULL);
+    std::ifstream file(filename);
     std::string line;
 
     while (std::getline(file, line)) {
