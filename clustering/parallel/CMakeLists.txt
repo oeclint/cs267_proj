@@ -21,12 +21,14 @@ project (clustering)
 add_definitions(-std=c++11)
 #target_link_libraries(example clustering)
 
-include_directories(${CMAKE_SOURCE_DIR}/../lib)
+include_directories(${CMAKE_SOURCE_DIR}/../lib ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES ( "$ENV{Eigen3_INCLUDE_DIR}" )
 link_directories(${CMAKE_SOURCE_DIR}/../lib/lib/)
 
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
-add_executable (example example.cpp)
+set(SOURCES example.cpp common.cpp)
+set(HEADERS common.h)
+add_executable (example ${SOURCES} ${HEADERS})
 target_link_libraries (example clustering)
 
 #INCLUDE_DIRECTORIES ( "${Eigen3_INCLUDE_DIR}" )
