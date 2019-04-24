@@ -3,3 +3,5 @@ CMakeFiles/
 /lib/lib/
 *.cmake
 Makefile
+*.error
+*stdout
