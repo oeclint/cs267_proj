@@ -6,7 +6,7 @@
 #include "SpectralClustering.h"
 #include <iostream>
 #include <fstream>
-
+#include "common.h"
 
 double calculate_similarity(std::pair<double, double> a, std::pair<double, double> b) {
     return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 1000);
@@ -14,7 +14,7 @@ double calculate_similarity(std::pair<double, double> a, std::pair<double, doubl
 
 int main() {
     std::vector<std::pair<double, double> > points;
-    std::ifstream file("test_points.txt");
+    std::ifstream file("large_points.txt");
     std::string line;
 
     while (std::getline(file, line)) {
@@ -31,6 +31,8 @@ int main() {
     //std::vector<int> items = {1,2,3,4,5,16,17,18,19,20};
 
     // generate similarity matrix
+ 
+    double simulation_time = read_timer( );
     unsigned int size = points.size();
     unsigned int numClusters = 2;
     Eigen::MatrixXd m = Eigen::MatrixXd::Zero(size,size);
@@ -48,11 +50,12 @@ int main() {
         }
     }
 
-    //for(int i = 0; i < 50; i++) {
-    //  std::cout << m(0, i) << " ";
-    //}
+    simulation_time = read_timer( ) - simulation_time;
+  
+    printf( "simulation time = %g seconds \n",  simulation_time);
+    
     // the number of eigenvectors to consider. This should be near (but greater) than the number of clusters you expect. Fewer dimensions will speed up the clustering
-    int numDims = 3;
+    /*int numDims = 3;
     // do eigenvalue decomposition
     SpectralClustering* c = new SpectralClustering(m, numDims);
 
@@ -70,9 +73,9 @@ int main() {
 
     // output clustered items
     // items are ordered according to distance from cluster centre
-    for (unsigned int i=0; i < clusters.size(); i++) {
+    /*for (unsigned int i=0; i < clusters.size(); i++) {
         std::cout << "Cluster " << i << ": " << "Item ";
         std::copy(clusters[i].begin(), clusters[i].end(), std::ostream_iterator<int>(std::cout, ", "));
         std::cout << std::endl;
-    }
+    } */
 }
