@@ -1,75 +1,106 @@
-#include "mpi.h"
-#include "stdio.h"
-#include "time.h"
-#include <cstdlib>
-#include <cstring>
-#include "jacobi.h"
+#include <mpi.h>
+#include <math.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <cmath>
+#include <Eigen/Core>
+#include "SpectralClustering.h"
 #include <iostream>
-//#include <chrono>
+#include <fstream>
 #include "common.h"
+#include "jacobi.h"
 
-Matrix SquareMatrix(const int n){
-  Matrix matrix = new float*[n];
-  for (int i = 0; i < n; i++) {
-    matrix[i] = new float[n];
-  }
-  srandom(time(0)+clock()+random());
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < n; j++){
-      matrix[i][j] = i + j + 1;//rand() % 4 + 1;
-      matrix[j][i] = matrix[i][j];
+typedef double** DMatrix;
+
+using namespace std;
+
+double calculate_similarity(double a1, double a2, double b1, double b2) {
+    return exp(-1 * (pow(a1 - b1, 2) + pow(a2 - b2, 2)) / 10);
+}
+
+double NormMatrix(DMatrix m, const int nrows, const int ncols) {
+  double norm = 0;
+  for (int j = 0; j < nrows; ++j) {
+    for (int k = 0; k < ncols; ++k) {
+      if (j != k) {
+        norm += m[j][k] * m[j][k];
+      }
     }
   }
-  return matrix;
+  return std::sqrt(norm);
 }
 
-int main(int argc, char** argv){
-  int n = std::atoi(argv[1]);
-  float start, end;
-  start = 0;
-  end = 0;
-  double elapsed_time = 0;
+int main( int argc, char **argv )
+{
+    char *filename = read_string( argc, argv, "-f", NULL );
+    std::vector<std::pair<double, double> > points;
+    std::ifstream file(filename);
+    std::string line;
 
-  MPI_Init(&argc, &argv);
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  std::cout << rank << std::endl;
-  elapsed_time -= MPI_Wtime();
-  Matrix m = SquareMatrix(n);
-  //PrintMatrix(m, n);
-  printf("\n");
-  double simulation_time = read_timer();
-  ParallelJacobi(m, n, 1e-2);
-  double elapsed = read_timer() - simulation_time;
-  if (rank == 0) {
-      std::cout << elapsed << std::endl;
-  }
-  elapsed_time += MPI_Wtime();
-  if (rank == 0) {
-    //for (int i = 0; i < n; ++i) {
-    //  printf("%f ", m[i][i]);
-    //}
-    printf("Dimension %i, time elapsed %f\n", n, elapsed_time);
-    //MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
-  }
-  MPI_Finalize();
-  for (int i = 0; i < n; ++i) {
-    delete[] m[i];
-  }
-  delete[] m;
-  return 0;
+    while (std::getline(file, line)) {
+        std::stringstream linestream(line);
+        std::string x;
+        std::string y;
+
+        linestream >> x >> y;
+        points.push_back(std::make_pair(std::stod(x), std::stod(y)));
+    }
+
+    int nrows = points.size();
+    int ncols = nrows;
+
+    int n = nrows * ncols;
+   
+    //double* points = points_vec.data();
+    //
+    //  set up MPI
+    //
+    int n_proc, rank;
+    MPI_Init( &argc, &argv );
+    MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    double simulation_time = read_timer( );
+  
+    int count = nrows / n_proc;
+    int remainder = nrows % n_proc;
+    int start, stop;
+
+    if (rank < remainder) {
+        // The first 'remainder' ranks get 'count + 1' tasks each
+        start = rank * (count + 1);
+        stop = start + count;
+    } else {
+        // The remaining 'size - remainder' ranks get 'count' task each
+        start = rank * count + remainder;
+        stop = start + (count - 1);
+    }
+     
+    int nrows_local = (stop - start + 1);
+    DMatrix local_sim_mat = new double*[nrows_local];
+    for (int i = 0; i < nrows_local; i++) {
+        local_sim_mat[i] = new double[ncols];
+      }
+
+    int row = 0;
+    for(int i=start; i<=stop; i++){
+        for(int j=0; j<ncols; j++){
+            local_sim_mat[row][j] = calculate_similarity(\
+                points[i].first, points[i].second, points[j].first, points[j].second);
+        }
+        row++;
+    }
+
+    double local_norm = NormMatrix(local_sim_mat, nrows_local, ncols);
+    double norm;
+    MPI_Allreduce(&local_norm, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    std::cout<<"rank "<< rank<< " lnorm " << local_norm << " norm " << norm << std::endl;
+    simulation_time = read_timer( ) - simulation_time;
+  
+    if (rank == 0) {  
+      printf( "n = %d, simulation time = %g seconds \n", nrows, simulation_time);
+    } 
+    MPI_Finalize( ); 
+    return 0;
 }
-
-/* Тестирование последовательного алгоритма Якоби*/
-/*int main(int argc, char** argv){
-  int dimesions[9] = {8, 16, 32, 64, 128, 256, 512, 1024, 2048};
-  clock_t t;
-  double elapsed_secs;
-  for (int i = 0; i < 9; ++i) {
-    t = clock();
-    SerialJacobi(SquareMatrix(dimesions[i]), dimesions[i], 1e-5);
-    elapsed_secs = double(clock() - t) / CLOCKS_PER_SEC;
-    printf("Dimension %i, elapsed time %f\n", dimesions[i], elapsed_secs);
-  }
-  return 0;
-} */
