@@ -7,12 +7,16 @@
 #include <iostream>
 #include <fstream>
 #include "common.h"
+#include "omp.h"
 
 double calculate_similarity(std::pair<double, double> a, std::pair<double, double> b) {
     return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 1000);
 }
 
 int main(int argc, char **argv) {
+    int dmin = 0;
+    int n = Eigen::nbThreads();
+    std::cout << n << std::endl;
     std::vector<std::pair<double, double> > points;
     char *filename = read_string(argc, argv, "-f", NULL);
     std::ifstream file(filename);
@@ -53,16 +57,22 @@ int main(int argc, char **argv) {
 
     simulation_time = read_timer( ) - simulation_time;
   
-    printf( "simulation time = %g seconds \n",  simulation_time);
-    
+    printf( "simulation time similarity = %g seconds \n",  simulation_time);
+   
+    simulation_time = read_timer(); 
     // the number of eigenvectors to consider. This should be near (but greater) than the number of clusters you expect. Fewer dimensions will speed up the clustering
-    /*int numDims = 3;
+    int numDims = 2;
+    SpectralClustering* c;
     // do eigenvalue decomposition
-    SpectralClustering* c = new SpectralClustering(m, numDims);
+    c = new SpectralClustering(m, numDims);
+    simulation_time = read_timer( ) - simulation_time;
+  
+    printf( "simulation time decomposition = %g seconds \n",  simulation_time);
 
     // whether to use auto-tuning spectral clustering or kmeans spectral clustering
     bool autotune = false;
 
+    simulation_time = read_timer();
     std::vector<std::vector<int> > clusters;
     if (autotune) {
         // auto-tuning clustering
@@ -72,6 +82,9 @@ int main(int argc, char **argv) {
         clusters = c->clusterKmeans(numClusters);
     }
 
+    simulation_time = read_timer( ) - simulation_time;
+  
+    printf( "simulation time clustering = %g seconds \n",  simulation_time);
     // output clustered items
     // items are ordered according to distance from cluster centre
     /*for (unsigned int i=0; i < clusters.size(); i++) {
