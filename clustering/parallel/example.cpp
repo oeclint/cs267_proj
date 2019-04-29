@@ -16,7 +16,7 @@ typedef double** DMatrix;
 typedef struct dbl_twoindex_struct {
     double val;
     int    rank;
-    int    i;
+    int    k;
     int    j;
 } dbl_twoindex;
 
@@ -30,7 +30,7 @@ void maxloc_dbl_twoindex(void *in, void *inout, int *len, MPI_Datatype *type){
         if (invals[i].val > inoutvals[i].val) {
             inoutvals[i].val  = invals[i].val;
             inoutvals[i].rank = invals[i].rank;
-            inoutvals[i].i = invals[i].i;
+            inoutvals[i].k = invals[i].k;
             inoutvals[i].j = invals[i].j;
         }
 
@@ -39,7 +39,7 @@ void maxloc_dbl_twoindex(void *in, void *inout, int *len, MPI_Datatype *type){
 
                 inoutvals[i].val  = invals[i].val;
                 inoutvals[i].rank = invals[i].rank;
-                inoutvals[i].i = invals[i].i;
+                inoutvals[i].k = invals[i].k;
                 inoutvals[i].j = invals[i].j;
 
               }
@@ -80,7 +80,7 @@ double NormMatrix(DMatrix m, const int nrows, const int ncols, const int row_off
 
 void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int ncols, const int row_offset) {
   max_ind.val = m[1][0];
-  max_ind.i = 1;
+  max_ind.k = 1;
   max_ind.j = 0;
   //for (int j = 0; j < ncols; ++j) {
   for (int i = 0; i < nrows; ++i) {
@@ -88,7 +88,7 @@ void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int n
       if (j != i+row_offset && abs(m[i][j]) > abs(max_ind.val)) {
         max_ind.val = m[i][j];
         max_ind.j = i;
-        max_ind.i = j;
+        max_ind.k = j;
     }
   }
 }
@@ -100,18 +100,18 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   double* mk = new double[nrows_vec[rank]];
 
   std::vector<int>::iterator high;
-  high = std::upper_bound (offsets.begin(), offsets.end(), max.j);
-  int rank_j = high - offsets.begin() - 1;
+  high = std::upper_bound (offsets.begin(), offsets.end(), max.k);
+  int rank_k = high - offsets.begin() - 1;
 
   //std::cout<<"maxj"<<max.j<<std::endl;
   //std::cout<<"ooo  "<<rank_j<<" "<< max.j<<std::endl;
-  int local_j = max.j - offsets[rank_j];
+  int local_k = max.k - offsets[rank_k];
 
-  int rank_k = max.rank;
-  int local_k = max.i;
+  int rank_j = max.rank;
+  int local_j = max.j;
 
-  int kc = offsets[max.rank] + max.i;
-  int jc = max.j;
+  int jc = offsets[rank_j] + max.j;
+  int kc = max.k;
 
   double mjj;
   double mjk;
@@ -198,7 +198,7 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
     MPI_Datatype types[4] = { MPI_DOUBLE, MPI_INT, MPI_INT, MPI_INT };
     MPI_Aint disps[4] = { offsetof(dbl_twoindex, val),
                      offsetof(dbl_twoindex, rank),
-                     offsetof(dbl_twoindex, i),
+                     offsetof(dbl_twoindex, k),
                      offsetof(dbl_twoindex, j),  };
     int lens[4] = {1,1,1,1};
     MPI_Type_create_struct(4, lens, disps, types, &mpi_dbl_twoindex);
@@ -224,7 +224,7 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
     while (global_norm > tol) {
             std::cout << "rank "<< rank << "Norm: " << global_norm << "/" << tol << std::endl;
             std::cout << "rank "<< rank << "Iter: " << num_iter << std::endl;
-            std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
+            std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.j << " j " << global_max.k << std::endl;
         if (rank == 0) {
             if(num_iter==1000000){
             MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
