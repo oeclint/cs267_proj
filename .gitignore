@@ -4,4 +4,4 @@ CMakeFiles/
 *.cmake
 Makefile
 *.error
-*stdout
+*.stdout
