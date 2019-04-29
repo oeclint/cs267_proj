@@ -66,11 +66,11 @@ double calculate_similarity(double a1, double a2, double b1, double b2) {
     return exp(-1 * (pow(a1 - b1, 2) + pow(a2 - b2, 2)) / 10);
 }
 
-double NormMatrix(DMatrix m, const int nrows, const int ncols) {
+double NormMatrix(DMatrix m, const int nrows, const int ncols, const int row_offset) {
   double norm = 0;
   for (int j = 0; j < nrows; ++j) {
     for (int k = 0; k < ncols; ++k) {
-      if (j != k) {
+      if (j + row_offset != k) {
         norm += m[j][k] * m[j][k];
       }
     }
@@ -78,16 +78,17 @@ double NormMatrix(DMatrix m, const int nrows, const int ncols) {
   return std::sqrt(norm);
 }
 
-void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int ncols) {
-  max_ind.val = m[0][0];
-  max_ind.i = 0;
+void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int ncols, const int row_offset) {
+  max_ind.val = m[1][0];
+  max_ind.i = 1;
   max_ind.j = 0;
+  //for (int j = 0; j < ncols; ++j) {
   for (int i = 0; i < nrows; ++i) {
     for (int j = 0; j < ncols; ++j) {
-      if (j != i && abs(m[i][j]) > abs(max_ind.val)) {
+      if (j != i+row_offset && abs(m[i][j]) > abs(max_ind.val)) {
         max_ind.val = m[i][j];
-        max_ind.j = j;
-        max_ind.i = i;
+        max_ind.j = i;
+        max_ind.i = j;
     }
   }
 }
@@ -102,8 +103,8 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   high = std::upper_bound (offsets.begin(), offsets.end(), max.j);
   int rank_j = high - offsets.begin() - 1;
 
-  std::cout<<"maxj"<<max.j<<std::endl;
-  std::cout<<"ooo  "<<rank_j<<" "<< max.j<<std::endl;
+  //std::cout<<"maxj"<<max.j<<std::endl;
+  //std::cout<<"ooo  "<<rank_j<<" "<< max.j<<std::endl;
   int local_j = max.j - offsets[rank_j];
 
   int rank_k = max.rank;
@@ -122,6 +123,7 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
 
   MPI_Bcast(&mjj, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
   MPI_Bcast(&mjk, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   double mkk;
   if(rank == rank_k)
@@ -132,6 +134,7 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   MPI_Bcast(&mkk, 1, MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
   MPI_Scatterv(m[local_j],&nrows_vec[0],&offsets[0],MPI_DOUBLE, mj, nrows_vec[rank], MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
   MPI_Scatterv(m[local_k],&nrows_vec[0],&offsets[0],MPI_DOUBLE, mk, nrows_vec[rank], MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   float c, s;
   if (mjj == mkk) {
@@ -188,7 +191,7 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
     int nrows = nrows_vec[rank];
     dbl_twoindex local_max, global_max;
     local_max.rank = rank;
-    find_abs_max(mat, local_max, nrows, ncols);
+    find_abs_max(mat, local_max, nrows, ncols, offsets[rank]);
 
     /* create our new data type */
     MPI_Datatype mpi_dbl_twoindex;
@@ -207,7 +210,7 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
  
     MPI_Allreduce(&local_max, &global_max, 1, mpi_dbl_twoindex, mpi_maxloc_dbl_twoindex, MPI_COMM_WORLD);
 //   std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
-    double local_norm = NormMatrix(mat, nrows, ncols);
+    double local_norm = NormMatrix(mat, nrows, ncols, offsets[rank]);
     double global_norm;
     MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     double tol = eps * global_norm;
@@ -219,18 +222,31 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
 
     int num_iter = 0;   
     while (global_norm > tol) {
-        if (rank == 0) {
-            std::cout << "Norm: " << global_norm << "/" << tol << std::endl;
-            std::cout << "Iter: " << num_iter << std::endl;
+            std::cout << "rank "<< rank << "Norm: " << global_norm << "/" << tol << std::endl;
+            std::cout << "rank "<< rank << "Iter: " << num_iter << std::endl;
             std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
-            num_iter++;
+        if (rank == 0) {
+            if(num_iter==1000000){
+            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+            }/*
+            std::cout << "rank "<< rank << "Norm: " << global_norm << "/" << tol << std::endl;
+            std::cout << "rank "<< rank << "Iter: " << num_iter << std::endl;
+            std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
+           */
+            //num_iter++;
         }
+        num_iter++;
         ParallelJacobiRotate(mat, global_max, offsets, nrows_vec, rank);
-        local_norm = NormMatrix(mat, nrows, ncols);
+        MPI_Barrier(MPI_COMM_WORLD);
+        local_norm = NormMatrix(mat, nrows, ncols, offsets[rank]);
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        find_abs_max(mat, local_max, nrows, ncols);
+        MPI_Barrier(MPI_COMM_WORLD);
+        find_abs_max(mat, local_max, nrows, ncols, offsets[rank]);
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&local_max, &global_max, 1, mpi_dbl_twoindex, mpi_maxloc_dbl_twoindex, MPI_COMM_WORLD);
-    }
+        MPI_Barrier(MPI_COMM_WORLD);  
+  }
 
 
 }
@@ -295,8 +311,6 @@ int main( int argc, char **argv )
         }
         row++;
     }
-
-    std::cout<<"hello"<<std::endl;
 
     std::vector<int> offsets;
 
