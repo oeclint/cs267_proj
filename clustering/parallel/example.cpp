@@ -80,46 +80,84 @@ void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int n
   }
 }
 }
-/*
-void ParallelJacobiRotate(Matrix m, dbl_twoindex max, const std::vector<int> &offsets, const std::vector<int> &nrows_vec) {
-  
-  std::vector<int>::iterator high;
-  high = std::upper_bound (offsets.begin(), offsets.end(), 25);
-  std::cout<<high-offsets.begin()-1<<std::endl;
 
-  int kc = offsets[max.rank] + max.i
-  int jc = max.j
+void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets, std::vector<int> &nrows_vec, int rank) {
+
+  double* mj = new double[nrows_vec[rank]];
+  double* mk = new double[nrows_vec[rank]];
+
+  std::vector<int>::iterator high;
+  high = std::upper_bound (offsets.begin(), offsets.end(), max.j);
+  int rank_j = high - offsets.begin() - 1;
+  int local_j = max.j - offsets[rank_j];
+
+  int rank_k = max.rank;
+  int local_k = max.i;
+
+  int kc = offsets[max.rank] + max.i;
+  int jc = max.j;
+
+  double mjj;
+  double mjk;
+  if(rank == rank_j)
+  {
+  mjj = m[local_j][jc];
+  mjk = m[local_j][kc];
+  }
+
+  MPI_Bcast(&mjj, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
+  MPI_Bcast(&mjk, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
+
+  double mkk;
+  if(rank == rank_k)
+  {
+  mkk = m[local_k][kc];
+  }
+
+  MPI_Bcast(&mkk, 1, MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
 
   float c, s;
-  if (m[j][jc] == m[k][kc]) {
+  if (mjj == mkk) {
     c = cos(M_PI / 4);
     s = sin(M_PI / 4);
   }
   else {
-    float tau = (m[j][jc] - m[k][kc]) / (2 * m[j][kc]);
+    float tau = (mjj - mkk) / (2 * mjk);
     float t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
     c = 1 / sqrt(1 + t * t);
     s = c * t;
   }
-  float tmp_jk = m[j][kc];
-  float tmp_jj = m[j][jc];
-  m[j][kc] = (c * c - s * s) * tmp_jk + s * c * (m[k][kc] - m[j][jc]);
-  m[k][jc] = m[j][kc];
-  m[j][jc] = c * c * tmp_jj + 2 * s * c * tmp_jk + s * s * m[k][kc];
-  m[k][kc] = s * s * tmp_jj - 2 * s * c * tmp_jk + c * c * m[k][kc];
-  float tmp_jl;
-  for (int l = 0; l < n; ++l) {
-    if (l != j && l != k) {
-      tmp_jl = m[j][l];
-      m[j][l] = c * tmp_jl + s * m[k][l];
-      m[k][l] = s * tmp_jl - c * m[k][l];
-      m[l][jc] = m[j][l];
-      m[l][kc] = m[k][l];
-    }
+
+  if(rank = rank_k){  
+      mj[local_k] = (c * c - s * s) * mjk + s * c * (mkk - mjj);
+      mk[local_k] = s * s * mjj - 2 * s * c * mjk + c * c * mkk;
+   }
+
+  if(rank = rank_j)
+  {
+      mk[local_j] = (c * c - s * s) * mjk + s * c * (mkk - mjj);
+      mj[local_j] = c * c * mjj + 2 * s * c * mjk + s * s * mkk;
   }
+
+  float tmp_jl;
+  int row_start = offsets[rank];
+  int row_end = row_start + nrows_vec[rank];
+  int row = 0;
+  for (int l = row_start; l < row_end; ++l) {
+    if (l != jc && l != kc) {
+      tmp_jl = mj[row];
+      mj[row] = c * tmp_jl + s * mk[row];
+      mk[row] = s * tmp_jl - c * mk[row];
+      m[row][jc] = mj[row];
+      m[row][kc] = mk[row];
+    }
+    row++;
+  }
+  MPI_Gatherv(mj, nrows_vec[rank],MPI_DOUBLE,m[local_j],&nrows_vec[0],&offsets[0],MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
+  MPI_Gatherv(mk, nrows_vec[rank],MPI_DOUBLE,m[local_k],&nrows_vec[0],&offsets[0],MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
 }
-*/
-void ParallelJacobi(DMatrix mat, const std::vector<int> &offsets, const int ncols, const float eps, const int rank) {
+
+void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, const float eps, const int rank) {
     
     std::vector<int> nrows_vec;
 
@@ -156,12 +194,13 @@ void ParallelJacobi(DMatrix mat, const std::vector<int> &offsets, const int ncol
     MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     double tol = eps * global_norm;
 
+    ParallelJacobiRotate(mat, global_max, offsets, nrows_vec, rank);
 //    std::cout<<"rank "<< rank<< " lnorm " << local_norm << " norm " << norm << std::endl;
 //    if(rank==global_max.rank)
 //        std::cout<<"rank " << rank << " max " << mat[global_max.i][global_max.j] <<  std::endl;
 /*
     while (global_norm > tol) {
-        ParallelJacobiRotate(mat, global_max, offsets, nrows_vec);
+        ParallelJacobiRotate(mat, global_max, offsets, nrows_vec, rank);
         local_norm = NormMatrix(mat, nrows, ncols);
         MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         find_abs_max(mat, local_max, nrows, ncols);
@@ -239,9 +278,6 @@ int main( int argc, char **argv )
 
     MPI_Allgather(&start,1,MPI_INT,&offsets[0],1,MPI_INT,MPI_COMM_WORLD);
 
-    std::vector<int>::iterator high;
-    high = std::upper_bound (offsets.begin(), offsets.end(), 25);
-    std::cout<<high-offsets.begin()-1<<std::endl;
     //double local_norm = NormMatrix(local_sim_mat, nrows_local, ncols);
     //double norm;
     //MPI_Allreduce(&local_norm, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
