@@ -163,15 +163,7 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   MPI_Gatherv(mk, nrows_vec[rank],MPI_DOUBLE,m[local_k],&nrows_vec[0],&offsets[0],MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
 }
 
-void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, const float eps, const int rank) {
-    
-    std::vector<int> nrows_vec;
-
-    for(int i=0; i< offsets.size()-1; i++){
-        nrows_vec.push_back(offsets[i+1]-offsets[i]);
-    }
-
-    nrows_vec.push_back(ncols - offsets.back());
+void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, std::vector<int> &nrows_vec, const int ncols, const float eps, const int rank) {
 
     int nrows = nrows_vec[rank];
     dbl_twoindex local_max, global_max;
@@ -287,12 +279,44 @@ int main( int argc, char **argv )
 
     MPI_Allgather(&start,1,MPI_INT,&offsets[0],1,MPI_INT,MPI_COMM_WORLD);
 
-    ParallelJacobi(local_sim_mat, offsets, ncols, 1e-5, rank);
+    std::vector<int> nrows_vec;
+
+    for(int i=0; i< offsets.size()-1; i++){
+        nrows_vec.push_back(offsets[i+1]-offsets[i]);
+    }
+
+    nrows_vec.push_back(ncols - offsets.back());
+
+    ParallelJacobi(local_sim_mat, offsets, nrows_vec, ncols, 1e-5, rank);
     simulation_time = read_timer( ) - simulation_time;
   
     if (rank == 0) {  
       printf( "n = %d, simulation time = %g seconds \n", nrows, simulation_time);
-    } 
+    }
+
+    int _row = 0;
+    for(int i=start; i<=stop; i++){
+        for(int j=0; j<ncols; j++){
+            if(i == j){
+                std::cout<<"rank: " << rank << "num: " << _row << "eigen: "<< local_sim_mat[_row][j] << std::endl;
+            }
+        }
+        _row++;
+    }
+
+/*
+    double* sim_mat = new double[n];
+    double offsets_flat[n_proc];
+    double nrows_vec_flat[n_proc];
+
+    for(int = 0; i < n_proc; i++){
+        offsets_flat[i] = offsets[i] * ncols;
+        nrows_vec_flat[i] = nrows_vec[i] * ncols;
+    }
+
+    MPI_Gatherv(local_sim_mat_flat, nrows_vec_flat[rank], MPI_DOUBLE, sim_mat, nrows_vec_flat, offsets_flat, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    */
+    //MPI_Gatherv(local_sim_mat_flat, , , sim_mat,); 
     MPI_Finalize( ); 
     return 0;
 }
