@@ -17,7 +17,7 @@ struct Ind2D {
 };
 
 Ind2D find_abs_max(Matrix m, const int n) {
-  float max = m[1][0];
+  double max = m[1][0];
   Ind2D max_ind(1, 0);
   for (int k = 0; k < n; ++k) {
     for (int j = 0; j < n; ++j) {
@@ -31,8 +31,8 @@ Ind2D find_abs_max(Matrix m, const int n) {
   return max_ind;
 }
 
-float NormMatrix(Matrix m, const int n) {
-  float norm = 0;
+double NormMatrix(Matrix m, const int n) {
+  double norm = 0;
   for (int j = 0; j < n; ++j) {
     for (int k = 0; k < n; ++k) {
       if (j != k) {
@@ -68,24 +68,54 @@ int** get_even_and_odd_ranks(int world_ranksize) {
 }
 
 void SerialJacobiRotate(Matrix m, const int j, const int k, const int n) {
-  float c, s;
+  double c, s;
   if (m[j][j] == m[k][k]) {
     c = cos(M_PI / 4);
     s = sin(M_PI / 4);
   }
   else {
-    float tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
-    float t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
+    double tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
+    double t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
     c = 1 / sqrt(1 + t * t);
     s = c * t;
   }
-  float tmp_jk = m[j][k];
-  float tmp_jj = m[j][j];
+  double tmp_jk = m[j][k];
+  double tmp_jj = m[j][j];
   m[j][k] = (c * c - s * s) * tmp_jk + s * c * (m[k][k] - m[j][j]);
   m[k][j] = m[j][k];
   m[j][j] = c * c * tmp_jj + 2 * s * c * tmp_jk + s * s * m[k][k];
   m[k][k] = s * s * tmp_jj - 2 * s * c * tmp_jk + c * c * m[k][k];
-  float tmp_jl;
+  double tmp_jl;
+  for (int l = 0; l < n; ++l) {
+    if (l != j && l != k) {
+      tmp_jl = m[j][l];
+      m[j][l] = c * tmp_jl + s * m[k][l];
+      m[k][l] = s * tmp_jl - c * m[k][l];
+      m[l][j] = m[j][l];
+      m[l][k] = m[k][l];
+    }
+  }
+}
+
+void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int n) {
+  double c, s;
+  if (m[j][j] == m[k][k]) {
+    c = cos(M_PI / 4);
+    s = sin(M_PI / 4);
+  }
+  else {
+    double tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
+    double t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
+    c = 1 / sqrt(1 + t * t);
+    s = c * t;
+  }
+  double tmp_jk = m[j][k];
+  double tmp_jj = m[j][j];
+  m[j][k] = (c * c - s * s) * tmp_jk + s * c * (m[k][k] - m[j][j]);
+  m[k][j] = m[j][k];
+  m[j][j] = c * c * tmp_jj + 2 * s * c * tmp_jk + s * s * m[k][k];
+  m[k][k] = s * s * tmp_jj - 2 * s * c * tmp_jk + c * c * m[k][k];
+  double tmp_jl;
   for (int l = 0; l < n; ++l) {
     if (l != j && l != k) {
       tmp_jl = m[j][l];
@@ -109,10 +139,10 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
   int rank, world_ranksize;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &world_ranksize);
-  float c, s;
+  double c, s;
   int j, k;
-  float* row_j = new float[n];
-  float* row_k = new float[n];
+  double* row_j = new double[n];
+  double* row_k = new double[n];
   if (rank == 0) {
     j = ind_j;
     k = ind_k;
@@ -122,8 +152,8 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
       s = sin(M_PI / 4);
     }
     else {
-      float tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
-      float t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
+      double tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
+      double t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
       c = 1 / sqrt(1 + t * t);
       s = c * t;
     }
@@ -142,7 +172,7 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
   MPI_Bcast(row_j, n, MPI_FLOAT, 0, MPI_COMM_WORLD);  // строка j
   MPI_Bcast(row_k, n, MPI_FLOAT, 0, MPI_COMM_WORLD);  // строка k
   //MPI_Barrier(MPI_COMM_WORLD);
-  float m_jj, m_kk;
+  double m_jj, m_kk;
   /*if (rank == 1) {
     //  Процесс ! пересчитывает jj диагональный элемент
     m_jj = c * c * row_j[j] + 2 * s * c * row_j[k] + s * s * row_k[k];
@@ -172,7 +202,7 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
 
   int row_j_rank = -1;
   int row_j_size = -1;
-  float* row_j_new = new float[n];
+  double* row_j_new = new double[n];
   //  проверяем существование коммуникатора
   if (MPI_COMM_NULL != row_j_comm) {
     MPI_Comm_rank(row_j_comm, &row_j_rank);
@@ -180,9 +210,9 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
     //  часть строки, которую пересчитывает один поток из группы row_j_comm
     int size = n / row_j_size;
     //  Выделяем память под буфферы
-    float* row_j_part = new float[size];
-    float* row_k_part = new float[size];
-    float* row_j_new_part = new float[size];
+    double* row_j_part = new double[size];
+    double* row_k_part = new double[size];
+    double* row_j_new_part = new double[size];
     //  Разбиваем k и j строки между процессами группы row_j_comm
     MPI_Scatter(row_j, size, MPI_FLOAT, row_j_part, size, MPI_FLOAT, 0, row_j_comm);
     MPI_Scatter(row_k, size, MPI_FLOAT, row_k_part, size, MPI_FLOAT, 0, row_j_comm);
@@ -207,14 +237,14 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
 
   int row_k_rank = -1;
   int row_k_size = -1;
-  float* row_k_new = new float[n];
+  double* row_k_new = new double[n];
   if (MPI_COMM_NULL != row_k_comm) {
     MPI_Comm_rank(row_k_comm, &row_k_rank);
     MPI_Comm_size(row_k_comm, &row_k_size);
     int size = n / row_k_size;
-    float* row_j_part = new float[size];
-    float* row_k_part = new float[size];
-    float* row_k_new_part = new float[size];
+    double* row_j_part = new double[size];
+    double* row_k_part = new double[size];
+    double* row_k_new_part = new double[size];
     MPI_Scatter(row_j, size, MPI_FLOAT, row_j_part, size, MPI_FLOAT, 0, row_k_comm);
     MPI_Scatter(row_k, size, MPI_FLOAT, row_k_part, size, MPI_FLOAT, 0, row_k_comm);
     for (int i = 0; i < size; ++i) {
@@ -268,11 +298,11 @@ void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
   delete[] row_j;
 }
 
-void SerialJacobi(Matrix mat, const int n, const float eps) {
+void SerialJacobi(Matrix mat, const int n, const double eps) {
   Ind2D ind_max;
   ind_max = find_abs_max(mat, n);
-  float norm = NormMatrix(mat, n);
-  float tol = eps * norm;
+  double norm = NormMatrix(mat, n);
+  double tol = eps * norm;
   printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
   while (NormMatrix(mat, n) > tol) {
     //printf("%f ", norm);
@@ -282,12 +312,26 @@ void SerialJacobi(Matrix mat, const int n, const float eps) {
   }
 }
 
-void ParallelJacobi(Matrix mat, const int n, const float eps) {
+void SerialJacobiV(Matrix mat, Matrix v, const int n, const double eps) {
   Ind2D ind_max;
-  float elapsed_time = 0;
   ind_max = find_abs_max(mat, n);
-  float norm = NormMatrix(mat, n);;
-  float tol;
+  double norm = NormMatrix(mat, n);
+  double tol = eps * norm;
+  printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
+  while (NormMatrix(mat, n) > tol) {
+    //printf("%f ", norm);
+    SerialJacobiRotateV(mat, v, ind_max.j, ind_max.k, n);
+    //PrintMatrix(mat, n);
+    ind_max = find_abs_max(mat, n);
+  }
+}
+
+void ParallelJacobi(Matrix mat, const int n, const double eps) {
+  Ind2D ind_max;
+  double elapsed_time = 0;
+  ind_max = find_abs_max(mat, n);
+  double norm = NormMatrix(mat, n);;
+  double tol;
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {

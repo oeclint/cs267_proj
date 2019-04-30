@@ -1,22 +1,109 @@
-#include <vector>
-#include <algorithm>
-#include <iterator>
-#include <cmath>
-#include <Eigen/Core>
-#include "SpectralClustering.h"
+#include "mpi.h"
+#include "stdio.h"
+#include "time.h"
+#include <cstdlib>
+#include <cstring>
+#include "jacobi.h"
 #include <iostream>
+#include <cmath>
+#include <vector>
+#include <sstream>
 #include <fstream>
 #include "common.h"
-#include "omp.h"
 
 double calculate_similarity(std::pair<double, double> a, std::pair<double, double> b) {
-    return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 1000);
+    return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 10);
 }
 
+Matrix SquareMatrix(const int n){
+  Matrix matrix = new double*[n];
+  for (int i = 0; i < n; i++) {
+    matrix[i] = new double[n];
+  }
+  srandom(time(0)+clock()+random());
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < n; j++){
+      matrix[i][j] = i + j + 1;//rand() % 4 + 1;
+      matrix[j][i] = matrix[i][j];
+    }
+  }
+  return matrix;
+}
+
+Matrix EmpMatrix(const int n){
+  Matrix matrix = new double*[n];
+  for (int i = 0; i < n; i++) {
+    matrix[i] = new double[n];
+  }
+  return matrix;
+  }
+
+Matrix IdMatrix(const int n){
+  Matrix matrix = new double*[n];
+  for (int i = 0; i < n; i++) {
+    matrix[i] = new double[n];
+  }
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < n; j++){
+      if(i==j){
+        matrix[i][j] = 1;
+      }
+      else{
+      matrix[i][j] = 0;
+      }
+    }
+  }
+  return matrix;
+}
+/*
+int main(int argc, char** argv){
+  int n = std::atoi(argv[1]);
+  std::cout << n << std::endl;
+  double start, end;
+  start = 0;
+  end = 0;
+  double elapsed_time = 0;
+
+  MPI_Init(&argc, &argv);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  elapsed_time -= MPI_Wtime();
+  Matrix m = SquareMatrix(n);
+  PrintMatrix(m, n);
+  printf("\n");
+  ParallelJacobi(m, n, 1e-5);
+  elapsed_time += MPI_Wtime();
+  *if (rank == 0) {
+    for (int i = 0; i < n; ++i) {
+      printf("%f ", m[i][i]);
+    }
+    printf("Dimension %i, time elapsed %f\n", n, elapsed_time);
+    MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+  } *
+  MPI_Finalize();
+  for (int i = 0; i < n; ++i) {
+    delete[] m[i];
+  }
+  delete[] m;
+  return 0;
+}
+*/
+
+/* Тестирование последовательного алгоритма Якоби*/
+/*int main(int argc, char** argv){
+  int dimesions[8] = {8, 16, 32, 64, 128, 256, 512, 1024};
+  clock_t t;
+  double elapsed_secs;
+  for (int i = 0; i < 8; ++i) {
+    t = clock();
+    SerialJacobi(SquareMatrix(dimesions[i]), dimesions[i], 1e-5);
+    elapsed_secs = double(clock() - t) / CLOCKS_PER_SEC;
+    printf("Dimension %i, elapsed time %f\n", dimesions[i], elapsed_secs);
+  }
+  return 0;
+}*/
+
 int main(int argc, char **argv) {
-    int dmin = 0;
-    int n = Eigen::nbThreads();
-    std::cout << n << std::endl;
     std::vector<std::pair<double, double> > points;
     char *filename = read_string(argc, argv, "-f", NULL);
     std::ifstream file(filename);
@@ -32,64 +119,32 @@ int main(int argc, char **argv) {
 
     }
 
-    std::cout << points.size() << std::endl; 
-    //std::vector<int> items = {1,2,3,4,5,16,17,18,19,20};
-
-    // generate similarity matrix
- 
-    double simulation_time = read_timer( );
+    std::cout << points.size() << std::endl;
     unsigned int size = points.size();
-    unsigned int numClusters = 2;
-    Eigen::MatrixXd m = Eigen::MatrixXd::Zero(size,size);
     double similarity;
+    Matrix m = EmpMatrix(size);
+
     for (unsigned int i=0; i < size; i++) {
         for (unsigned int j=0; j < size; j++) {
             //if (i == j) similarity = 0;
             //else {
             // generate similarity
-            similarity = calculate_similarity(points[i], points[j]);
             //}
             //std::cout << similarity << std::endl;
-            m(i,j) = similarity;
-            m(j,i) = similarity;
+            similarity = calculate_similarity(points[i], points[j]);
+            m[i][j] = similarity;
+            m[j][i] = similarity;
         }
+
     }
 
-    simulation_time = read_timer( ) - simulation_time;
-  
-    printf( "simulation time similarity = %g seconds \n",  simulation_time);
-   
-    simulation_time = read_timer(); 
-    // the number of eigenvectors to consider. This should be near (but greater) than the number of clusters you expect. Fewer dimensions will speed up the clustering
-    int numDims = 2;
-    SpectralClustering* c;
-    // do eigenvalue decomposition
-    c = new SpectralClustering(m, numDims);
-    simulation_time = read_timer( ) - simulation_time;
-  
-    printf( "simulation time decomposition = %g seconds \n",  simulation_time);
-
-    // whether to use auto-tuning spectral clustering or kmeans spectral clustering
-    bool autotune = false;
-
-    simulation_time = read_timer();
-    std::vector<std::vector<int> > clusters;
-    if (autotune) {
-        // auto-tuning clustering
-        clusters = c->clusterRotate();
-    } else {
-        // how many clusters you want
-        clusters = c->clusterKmeans(numClusters);
-    }
-
-    simulation_time = read_timer( ) - simulation_time;
-  
-    printf( "simulation time clustering = %g seconds \n",  simulation_time);
-    // output clustered items
-    // items are ordered according to distance from cluster centre
-    /*for (unsigned int i=0; i < clusters.size(); i++) {
-        std::cout << "Cluster " << i << ": " << "Item ";
-        std::copy(clusters[i].begin(), clusters[i].end(), std::ostream_iterator<int>(std::cout, ", "));
-        std::cout << std::endl;
-    } */
+    clock_t t;
+    Matrix v = IdMatrix(size);
+    double elapsed_secs;
+    t = clock();
+    SerialJacobiV(m, v, size, 1e-5);
+    elapsed_secs = double(clock() - t) / CLOCKS_PER_SEC;
+    printf("Dimension %i, elapsed time %f\n", size, elapsed_secs);
+  return 0;
 }
+
