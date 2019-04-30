@@ -67,7 +67,7 @@ double NormMatrix(DMatrix m, const int nrows, const int ncols, const int row_off
 }
 
 void find_abs_max(DMatrix m, dbl_twoindex &max_ind, const int nrows, const int ncols, const int row_offset) {
-  max_ind.val = m[1][0];
+  max_ind.val = m[0][1];
   max_ind.k = 1;
   max_ind.j = 0;
   //for (int j = 0; j < ncols; ++j) {
