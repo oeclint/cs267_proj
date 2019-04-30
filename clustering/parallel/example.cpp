@@ -27,14 +27,14 @@ void maxloc_dbl_twoindex(void *in, void *inout, int *len, MPI_Datatype *type){
     dbl_twoindex *inoutvals = static_cast<dbl_twoindex *>(inout);
 
     for (int i=0; i<*len; i++) {
-        if (invals[i].val > inoutvals[i].val) {
+        if (abs(invals[i].val) > abs(inoutvals[i].val)) {
             inoutvals[i].val  = invals[i].val;
             inoutvals[i].rank = invals[i].rank;
             inoutvals[i].k = invals[i].k;
             inoutvals[i].j = invals[i].j;
         }
 
-        else if (invals[i].val == inoutvals[i].val){
+        else if (abs(invals[i].val) == abs(inoutvals[i].val)){
             if (invals[i].rank > inoutvals[i].rank){
 
                 inoutvals[i].val  = invals[i].val;
@@ -49,18 +49,6 @@ void maxloc_dbl_twoindex(void *in, void *inout, int *len, MPI_Datatype *type){
 
     return;
 }
-
-struct Ind2Dmax {
-  Ind2Dmax(int _i=0, int _j=0, double _max=0) {
-    i = _i;
-    j = _j;
-    max = _max;
-
-  }
-  int i;
-  int j;
-  double max;
-};
 
 double calculate_similarity(double a1, double a2, double b1, double b2) {
     return exp(-1 * (pow(a1 - b1, 2) + pow(a2 - b2, 2)) / 10);
@@ -103,8 +91,6 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   high = std::upper_bound (offsets.begin(), offsets.end(), max.k);
   int rank_k = high - offsets.begin() - 1;
 
-  //std::cout<<"maxj"<<max.j<<std::endl;
-  //std::cout<<"ooo  "<<rank_j<<" "<< max.j<<std::endl;
   int local_k = max.k - offsets[rank_k];
 
   int rank_j = max.rank;
@@ -123,7 +109,6 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
 
   MPI_Bcast(&mjj, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
   MPI_Bcast(&mjk, 1, MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
 
   double mkk;
   if(rank == rank_k)
@@ -134,7 +119,6 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
   MPI_Bcast(&mkk, 1, MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
   MPI_Scatterv(m[local_j],&nrows_vec[0],&offsets[0],MPI_DOUBLE, mj, nrows_vec[rank], MPI_DOUBLE, rank_j, MPI_COMM_WORLD);
   MPI_Scatterv(m[local_k],&nrows_vec[0],&offsets[0],MPI_DOUBLE, mk, nrows_vec[rank], MPI_DOUBLE, rank_k, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
 
   float c, s;
   if (mjj == mkk) {
@@ -148,17 +132,18 @@ void ParallelJacobiRotate(DMatrix m, dbl_twoindex max, std::vector<int> &offsets
     s = c * t;
   }
 
-  if(rank = rank_k){  
+  if(rank == rank_k){  
       mj[local_k] = (c * c - s * s) * mjk + s * c * (mkk - mjj);
       mk[local_k] = s * s * mjj - 2 * s * c * mjk + c * c * mkk;
    }
 
-  if(rank = rank_j)
+  if(rank == rank_j)
   {
       mk[local_j] = (c * c - s * s) * mjk + s * c * (mkk - mjj);
       mj[local_j] = c * c * mjj + 2 * s * c * mjk + s * s * mkk;
   }
 
+  //MPI_Barrier(MPI_COMM_WORLD);
   double tmp_jl;
   int row_start = offsets[rank];
   int row_end = row_start + nrows_vec[rank];
@@ -209,43 +194,27 @@ void ParallelJacobi(DMatrix mat, std::vector<int> &offsets, const int ncols, con
     MPI_Op_create(maxloc_dbl_twoindex, 1, &mpi_maxloc_dbl_twoindex);
  
     MPI_Allreduce(&local_max, &global_max, 1, mpi_dbl_twoindex, mpi_maxloc_dbl_twoindex, MPI_COMM_WORLD);
-//   std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
+    
     double local_norm = NormMatrix(mat, nrows, ncols, offsets[rank]);
     double global_norm;
     MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     double tol = eps * global_norm;
 
-//    ParallelJacobiRotate(mat, global_max, offsets, nrows_vec, rank);
-//    std::cout<<"rank "<< rank<< " lnorm " << local_norm << " norm " << norm << std::endl;
-//    if(rank==global_max.rank)
-//        std::cout<<"rank " << rank << " max " << mat[global_max.i][global_max.j] <<  std::endl;
-
     int num_iter = 0;   
     while (global_norm > tol) {
-            std::cout << "rank "<< rank << "Norm: " << global_norm << "/" << tol << std::endl;
-            std::cout << "rank "<< rank << "Iter: " << num_iter << std::endl;
-            std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.j << " j " << global_max.k << std::endl;
         if (rank == 0) {
-            if(num_iter==1000000){
-            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
-            }/*
             std::cout << "rank "<< rank << "Norm: " << global_norm << "/" << tol << std::endl;
             std::cout << "rank "<< rank << "Iter: " << num_iter << std::endl;
-            std::cout<<"rank "<< rank << " max " << local_max.val <<" grank "<< global_max.rank << " gmax " << global_max.val << " i " << global_max.i << " j " << global_max.j << std::endl;
-           */
-            //num_iter++;
+            std::cout<<"rank "<< rank << " max " << local_max.val <<\
+            " grank "<< global_max.rank << " gmax " << global_max.val <<\ 
+            " i " << global_max.j << " j " << global_max.k << std::endl;
+            num_iter++;
         }
-        num_iter++;
         ParallelJacobiRotate(mat, global_max, offsets, nrows_vec, rank);
-        MPI_Barrier(MPI_COMM_WORLD);
         local_norm = NormMatrix(mat, nrows, ncols, offsets[rank]);
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&local_norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
         find_abs_max(mat, local_max, nrows, ncols, offsets[rank]);
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(&local_max, &global_max, 1, mpi_dbl_twoindex, mpi_maxloc_dbl_twoindex, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);  
   }
 
 
@@ -318,10 +287,6 @@ int main( int argc, char **argv )
 
     MPI_Allgather(&start,1,MPI_INT,&offsets[0],1,MPI_INT,MPI_COMM_WORLD);
 
-    //double local_norm = NormMatrix(local_sim_mat, nrows_local, ncols);
-    //double norm;
-    //MPI_Allreduce(&local_norm, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    //std::cout<<"rank "<< rank<< " lnorm " << local_norm << " norm " << norm << std::endl;
     ParallelJacobi(local_sim_mat, offsets, ncols, 1e-5, rank);
     simulation_time = read_timer( ) - simulation_time;
   
