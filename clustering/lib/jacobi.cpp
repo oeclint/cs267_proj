@@ -8,36 +8,47 @@
 using namespace std;
 
 struct Ind2D {
-  Ind2D(int _i=0, int _j=0) {
+  Ind2D(int _i=0, int _j=0, double _max=0) {
     k = _i;
     j = _j;
+    max = _max;
   }
   int k;
   int j;
+  double max;
 };
 
 Ind2D find_abs_max(Matrix m, const int n) {
-  double max = m[1][0];
-  Ind2D max_ind(1, 0);
-  for (int k = 0; k < n; ++k) {
-    for (int j = 0; j < n; ++j) {
-      if (j != k && abs(m[j][k]) > abs(max)) {
-        max = m[j][k];
+  double max = 0;
+  Ind2D max_ind(0, 0);
+  for (int j = 0; j < n - 1; ++j) {
+    for (int k = j + 1; k < n; ++k) {
+      if (abs(m[j][k]) >= max) {
+        max = abs(m[j][k]);
         max_ind.j = j;
         max_ind.k = k;
+        max_ind.max = max;
       }
     }
   }
   return max_ind;
 }
 
+double NormMatrixV(Matrix m, const int n) {
+  double norm = 0;
+  for (int j = 0; j < n - 1; ++j) {
+    for (int k = j + 1; k < n; ++k) {
+        norm += abs(m[j][k]);
+    }
+  }
+  return norm;
+}
+
 double NormMatrix(Matrix m, const int n) {
   double norm = 0;
   for (int j = 0; j < n; ++j) {
     for (int k = 0; k < n; ++k) {
-      if (j != k) {
         norm += m[j][k] * m[j][k];
-      }
     }
   }
   return std::sqrt(norm);
@@ -97,8 +108,9 @@ void SerialJacobiRotate(Matrix m, const int j, const int k, const int n) {
   }
 }
 
-void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int n) {
+void SerialJacobiRotateV(Matrix a, Matrix p, const int k, const int l, const int n) {
   double c, s;
+ /* 
   if (m[j][j] == m[k][k]) {
     c = cos(M_PI / 4);
     s = sin(M_PI / 4);
@@ -109,7 +121,31 @@ void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int
     c = 1 / sqrt(1 + t * t);
     s = c * t;
   }
+*/
 
+
+//  if (abs(m[j][j] - m[k][k])/(0.5*(m[j][j] + m[k][k])) < 1e-15){
+//        c = cos(M_PI / 4);
+//        s = sin(M_PI / 4);
+//}
+
+/*
+  if (abs(m[j][j] - m[k][k]) < 1e-15){
+        c = cos(M_PI / 4);
+        s = sin(M_PI / 4);
+}
+  else{
+    double tau = (m[j][j] - m[k][k]) / (2 * m[j][k]);
+    double t = ((tau > 0) ? 1 : -1) / (abs(tau) + sqrt(1 + tau * tau));
+    c = 1 / sqrt(1 + t * t);
+    s = c * t;
+
+//      double phi = 0.5 * atan(2.0 * m[j][k]/(m[j][j] - m[k][k]));
+//      c = cos(phi);
+//      s = sin(phi);
+  }
+
+  
   double tmp_mjk = m[j][k];
   double tmp_mjj = m[j][j];
   m[j][k] = (c * c - s * s) * tmp_mjk + s * c * (m[k][k] - m[j][j]);
@@ -141,6 +177,145 @@ void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int
 
     }
   }
+  */
+/*
+    def rotate(a,p,k,l): # Rotate to make a[k,l] = 0
+        n = len(a)
+        aDiff = a[l,l] - a[k,k]
+        if abs(a[k,l]) < abs(aDiff)*1.0e-36: t = a[k,l]/aDiff
+        else:
+            phi = aDiff/(2.0*a[k,l])
+            t = 1.0/(abs(phi) + sqrt(phi**2 + 1.0))
+            if phi < 0.0: t = -t
+        c = 1.0/sqrt(t**2 + 1.0); s = t*c
+        tau = s/(1.0 + c)
+        temp = a[k,l]
+        a[k,l] = 0.0
+        a[k,k] = a[k,k] - t*temp
+        a[l,l] = a[l,l] + t*temp
+        for i in range(k):      # Case of i < k
+            temp = a[i,k]
+            a[i,k] = temp - s*(a[i,l] + tau*temp)
+            a[i,l] = a[i,l] + s*(temp - tau*a[i,l])
+        for i in range(k+1,l):  # Case of k < i < l
+            temp = a[k,i]
+            a[k,i] = temp - s*(a[i,l] + tau*a[k,i])
+            a[i,l] = a[i,l] + s*(temp - tau*a[i,l])
+        for i in range(l+1,n):  # Case of i > l
+            temp = a[k,i]
+            a[k,i] = temp - s*(a[l,i] + tau*temp)
+            a[l,i] = a[l,i] + s*(temp - tau*a[l,i])
+        for i in range(n):      # Update transformation matrix
+            temp = p[i,k]
+            p[i,k] = temp - s*(p[i,l] + tau*p[i,k])
+            p[i,l] = p[i,l] + s*(temp - tau*p[i,l])
+*/
+/*
+        double aDiff = m[k][k] - m[j][j];
+        double t;
+
+        if(abs(m[j][k]) < abs(aDiff)*1.0e-36) 
+             {t = m[j][k]/aDiff;
+        }
+        else{
+            double phi = aDiff/(2.0*m[j][k]);
+            t = 1.0/(abs(phi) + sqrt(phi*phi + 1.0));
+            if (phi < 0.0){ 
+                t = -t;}
+        }
+        c = 1.0/sqrt(t*t + 1.0); 
+        s = t*c;
+        double tau = s/(1.0 + c);
+        double temp;
+        temp = m[j][k];
+        m[j][k] = 0.0;
+        m[j][j] = m[j][j] - t*temp;
+        m[k][k] = m[k][k] + t*temp;
+        for (int l=0; l < j ; l++){
+            temp = m[l][j];
+            m[l][j] = temp - s*(m[l][k] + tau*temp);
+            m[l][k] = m[l][k] + s*(temp - tau*m[l][k]);
+        }
+        for (int l= j + 1; l < k; l++){ 
+            temp = m[j][l];
+            m[j][l] = temp - s*(m[l][k] + tau*m[j][l]);
+            m[l][k] = m[l][k] + s*(temp - tau*m[l][k]);
+        }
+        for (int l = k + 1; l < n ; l++){
+            temp = m[j][l];
+            m[j][l] = temp - s*(m[k][l] + tau*temp);
+            m[k][l] = m[k][l] + s*(temp - tau*m[k][l]);
+        }
+        for (int l = 0; l < n; l++){
+            temp = v[l][j];
+            v[l][j] = temp - s*(v[l][k] + tau*v[l][j]);
+            v[l][k] = v[l][k] + s*(temp - tau*v[l][k]);
+        }
+
+*/ 
+/*
+   double store;
+                           for (int l= j + 1; l < k; l++){
+                               store  = m[j][l];
+                               m[j][l] = m[j][l]*c + m[l][k]*s;
+                               m[l][k] = m[l][k]*c - store *s;} 
+                           for (int l = k + 1; l < n ; l++){
+                               store  = m[j][l];
+                               m[j][l] = m[j][l]*c + m[k][l]*s; 
+                               m[k][l] = m[k][l]*c - store *s;}
+                           for (int l=0; l < j ; l++){
+                               store  = m[l][j];
+                               m[l][j] = m[l][j]*c + m[l][k]*s;
+                               m[l][k] = m[l][k]*c - store *s;}
+                           store = m[j][j];
+                           m[j][j] = m[j][j]*c*c + 2.0*m[j][k]*c*s +m[k][k]*s*s;
+                           m[k][k] = m[k][k]*c*c - 2.0*m[j][k]*c*s +store *s*s;
+                           m[j][k] = 0.0;                                          
+                           for (int l = 0; l < n; l++){
+                                store  = v[l][k];
+                                v[l][k] = v[l][k]*c - v[l][j]*s;
+                                v[l][j] = v[l][j]*c + store *s;}
+*/
+
+
+        double aDiff = a[l][l] - a[k][k];
+        double t;
+        double tau;
+        double temp;
+
+        if (abs(a[k][l]) < abs(aDiff)*1.0e-36){
+            t = a[k][l]/aDiff;}
+        else{
+            double phi = aDiff/(2.0*a[k][l]);
+            t = 1.0/(abs(phi) + sqrt(phi*phi + 1.0));
+            if (phi < 0.0){
+                    t = -t;
+            }
+        }
+        c = 1.0/sqrt(t*t + 1.0);  
+        s = t*c;
+        tau = s/(1.0 + c);
+        temp = a[k][l];
+        a[k][l] = 0.0;
+        a[k][k] = a[k][k] - t*temp;
+        a[l][l] = a[l][l] + t*temp;
+        for (int i=0; i<k; i++){
+            temp = a[i][k];
+            a[i][k] = temp - s*(a[i][l] + tau*temp);
+            a[i][l] = a[i][l] + s*(temp - tau*a[i][l]);}
+        for (int i = k+1; i< l; i++){
+            temp = a[k][i];
+            a[k][i] = temp - s*(a[i][l] + tau*a[k][i]);
+            a[i][l] = a[i][l] + s*(temp - tau*a[i][l]);}
+        for (int i = l+1; i < n; i++){
+            temp = a[k][i];
+            a[k][i] = temp - s*(a[l][i] + tau*temp);
+            a[l][i] = a[l][i] + s*(temp - tau*a[l][i]);}
+        for (int i = 0; i < n; i++){
+            temp = p[i][k];
+            p[i][k] = temp - s*(p[i][l] + tau*p[i][k]);
+            p[i][l] = p[i][l] + s*(temp - tau*p[i][l]);}
+
 }
 
 void ParallelJacobiRotate(Matrix m, int ind_j, int ind_k, const int n) {
@@ -330,17 +505,27 @@ void SerialJacobi(Matrix mat, const int n, const double eps) {
 
 void SerialJacobiV(Matrix mat, Matrix v, const int n, const double eps) {
   Ind2D ind_max;
+  double norm = NormMatrixV(mat, n);
+
+
+  std::cout<<"ind_max " << ind_max.max <<std::endl;
   ind_max = find_abs_max(mat, n);
-  double norm = NormMatrix(mat, n);
+  std::cout<<"ind_max " << ind_max.max <<std::endl;
   double tol = eps * norm;
-  printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
-  while (norm > tol) {
+  printf("eps = %f, norm = %f, tol = %f\n, max = %f\n",eps, norm, tol,ind_max.max);
+
+  if(ind_max.max>eps){
+
+  std::cout<<"erwrwerewrwer"<<std::endl;
+  }
+  while (ind_max.max > eps) {
     //printf("%f ", norm);
+    //ind_max = find_abs_max(mat, n);
     SerialJacobiRotateV(mat, v, ind_max.j, ind_max.k, n);
-    norm = NormMatrix(mat, n);
-    //PrintMatrix(mat, n);
     ind_max = find_abs_max(mat, n);
-    printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
+    norm = NormMatrixV(mat, n);
+    //PrintMatrix(mat, n);
+    printf("epss = %f, norm = %f, tol = %f\n",eps, norm, tol);
   }
 }
 
