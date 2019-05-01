@@ -10,6 +10,7 @@
 #include <sstream>
 #include <fstream>
 #include "common.h"
+#include <Eigen/Eigenvalues>
 
 double calculate_similarity(std::pair<double, double> a, std::pair<double, double> b) {
     return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / 10);
@@ -124,6 +125,7 @@ int main(int argc, char **argv) {
     double similarity;
     Matrix m = EmpMatrix(size);
 
+    Eigen::MatrixXd A(size,size);
     for (unsigned int i=0; i < size; i++) {
         for (unsigned int j=0; j < size; j++) {
             //if (i == j) similarity = 0;
@@ -134,15 +136,27 @@ int main(int argc, char **argv) {
             similarity = calculate_similarity(points[i], points[j]);
             m[i][j] = similarity;
             m[j][i] = similarity;
+            A(i,j) = similarity;
+            A(j,i) = similarity;
         }
 
     }
+
+    Eigen::EigenSolver<Eigen::MatrixXd> es(A, true);
+    std::cout <<es.eigenvectors()<<std::endl; 
 
     clock_t t;
     Matrix v = IdMatrix(size);
     double elapsed_secs;
     t = clock();
     SerialJacobiV(m, v, size, 1e-5);
+    PrintMatrix(v, size);
+    std::cout <<es.eigenvalues()<<std::endl;
+
+    for(int i =0; i < size; i++){
+        std::cout << m[i][i] << std::endl;
+
+    }
     elapsed_secs = double(clock() - t) / CLOCKS_PER_SEC;
     printf("Dimension %i, elapsed time %f\n", size, elapsed_secs);
   return 0;
