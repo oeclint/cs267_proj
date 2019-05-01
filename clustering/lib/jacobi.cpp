@@ -109,20 +109,36 @@ void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int
     c = 1 / sqrt(1 + t * t);
     s = c * t;
   }
-  double tmp_jk = m[j][k];
-  double tmp_jj = m[j][j];
-  m[j][k] = (c * c - s * s) * tmp_jk + s * c * (m[k][k] - m[j][j]);
+
+  double tmp_mjk = m[j][k];
+  double tmp_mjj = m[j][j];
+  m[j][k] = (c * c - s * s) * tmp_mjk + s * c * (m[k][k] - m[j][j]);
   m[k][j] = m[j][k];
-  m[j][j] = c * c * tmp_jj + 2 * s * c * tmp_jk + s * s * m[k][k];
-  m[k][k] = s * s * tmp_jj - 2 * s * c * tmp_jk + c * c * m[k][k];
-  double tmp_jl;
+  m[j][j] = c * c * tmp_mjj + 2 * s * c * tmp_mjk + s * s * m[k][k];
+  m[k][k] = s * s * tmp_mjj - 2 * s * c * tmp_mjk + c * c * m[k][k];
+
+  double tmp_vjk = v[j][k];
+  double tmp_vkj = v[k][j];
+  v[j][k] = c * tmp_vjk - s * v[j][j];
+  v[k][j] = c * tmp_vkj + s * v[k][k];
+  v[j][j] = c * v[j][j] + s * tmp_vjk;
+  v[k][k] =  -s * tmp_vkj + c * v[k][k];
+
+  double tmp_mjl;
+  double tmp_vlj;
+
   for (int l = 0; l < n; ++l) {
     if (l != j && l != k) {
-      tmp_jl = m[j][l];
-      m[j][l] = c * tmp_jl + s * m[k][l];
-      m[k][l] = s * tmp_jl - c * m[k][l];
+      tmp_mjl = m[j][l];
+      m[j][l] = c * tmp_mjl + s * m[k][l];
+      m[k][l] = s * tmp_mjl - c * m[k][l];
       m[l][j] = m[j][l];
       m[l][k] = m[k][l];
+
+      tmp_vlj = v[l][j];
+      v[l][j] =  c * tmp_vlj + s * v[l][k];
+      v[l][k] = - s * tmp_vlj + c * v[l][k];
+
     }
   }
 }
@@ -318,11 +334,13 @@ void SerialJacobiV(Matrix mat, Matrix v, const int n, const double eps) {
   double norm = NormMatrix(mat, n);
   double tol = eps * norm;
   printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
-  while (NormMatrix(mat, n) > tol) {
+  while (norm > tol) {
     //printf("%f ", norm);
     SerialJacobiRotateV(mat, v, ind_max.j, ind_max.k, n);
+    norm = NormMatrix(mat, n);
     //PrintMatrix(mat, n);
     ind_max = find_abs_max(mat, n);
+    printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
   }
 }
 
