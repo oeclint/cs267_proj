@@ -4,4 +4,10 @@ CMakeFiles/
 *.cmake
 Makefile
 *.error
-*stdout
+*.stdout
+serial
+parallel
+!serial/
+!parallel/
+core
+*.swp
