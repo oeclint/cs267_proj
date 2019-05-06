@@ -35,6 +35,15 @@ Matrix IdMatrix(int rows, int cols){
   return matrix;
 }
 
+void PrintMatrix(Matrix m, int n) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      printf("%2.2f ", m[i][j]);
+    }
+    printf("\n");
+  }
+}
+
 //
 //  timer
 //

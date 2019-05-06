@@ -21,7 +21,7 @@ double calculate_similarity(std::pair<double, double> a, std::pair<double, doubl
 typedef double** Matrix;
 Matrix EmpMatrix(int rows, int cols);
 Matrix IdMatrix(int rows, int cols);
-
+void PrintMatrix(Matrix m, int n);
 //
 //  I/O routines
 //
