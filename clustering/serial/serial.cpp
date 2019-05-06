@@ -1,4 +1,3 @@
-#include "mpi.h"
 #include "stdio.h"
 #include "time.h"
 #include <cstdlib>
@@ -15,6 +14,7 @@
 int main(int argc, char **argv) {
     std::vector<std::pair<double, double> > points;
     char *filename = read_string(argc, argv, "-f", NULL);
+    int num_vec = read_int(argc, argv, "-k", 1);
     std::ifstream file(filename);
     std::string line;
 
@@ -49,6 +49,22 @@ int main(int argc, char **argv) {
     simulation_time = read_timer( ) - simulation_time;
     printf( "n = %d, simulation time = %g seconds \n", size, simulation_time);
 
+    std::vector<double> eigs;
+    for(int i =0; i < size; i++){
+        eigs.push_back(m[i][i]);
+    }
+    
+    std::vector<size_t> argsort = sort_indexes(eigs);
+    Matrix vk = EmpMatrix(size, num_vec);
+
+    for (int i =0; i < size; i++){
+        for (int j =0; j < num_vec; j++) {
+            vk[i][j] = v[i][argsort[j]];
+        }
+    }
+
+    //Sanity checks
+
     Eigen::MatrixXd A(size,size);
 
     for (unsigned int i=0; i < size; i++) {
@@ -62,17 +78,8 @@ int main(int argc, char **argv) {
 
     Eigen::EigenSolver<Eigen::MatrixXd> es(A, true);
     std::cout <<es.eigenvectors()<<std::endl;
-    PrintMatrix(v, size, size);
+    PrintMatrix(vk, size, num_vec);
     std::cout <<es.eigenvalues()<<std::endl;
-
-    std::vector<double> eigs;
-    for(int i =0; i < size; i++){
-        eigs.push_back(m[i][i]);
-    }
-
-    for (auto i: sort_indexes(eigs)) {
-        std::cout << eigs[i] << std::endl;
-    }
 
   return 0;
 }
