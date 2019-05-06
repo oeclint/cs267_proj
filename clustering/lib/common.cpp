@@ -48,6 +48,15 @@ void PrintMatrix(Matrix m, int rows, int cols) {
   }
 }
 
+void PrintMatrixFlat(double *m, int rows, int cols) {
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      printf("%2.2f ", m[i * cols + j]);
+    }
+    printf("\n");
+  }
+}
+
 std::vector<size_t> sort_indexes(const std::vector<double> &v) {
 
   // initialize original index locations

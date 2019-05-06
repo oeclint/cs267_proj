@@ -11,6 +11,7 @@
 int main( int argc, char **argv )
 {
     char *filename = read_string( argc, argv, "-f", NULL );
+    int num_vec = read_int(argc, argv, "-k", 1);
     std::vector<std::pair<double, double> > points;
     std::ifstream file(filename);
     std::string line;
@@ -96,7 +97,7 @@ int main( int argc, char **argv )
 
 
     double* local_eigs = new double[nrows_vec[rank]];
-    //double* eigs = new double[nrows];
+    
     std::vector<double> eigs;
 
     eigs.resize(nrows);
@@ -113,11 +114,27 @@ int main( int argc, char **argv )
 
     MPI_Allgatherv(local_eigs, nrows_vec[rank],MPI_DOUBLE,&eigs[0],&nrows_vec[0],&offsets[0],MPI_DOUBLE, MPI_COMM_WORLD);
 
+    double* vk = new double[nrows * num_vec];
+    double* local_vk = new double[nrows_vec[rank] * num_vec];
+    std::vector<size_t> argsort = sort_indexes(eigs);
+
+    for (int i =0; i < nrows_vec[rank]; i++){
+        for (int j =0; j < num_vec; j++) {
+            local_vk[i* num_vec + j] = v[i][argsort[j]];
+        }
+    }
+
+    for(int i=0; i< n_proc; i++){
+        offsets[i] = offsets[i] * num_vec;
+        nrows_vec[i] = nrows_vec[i] * num_vec;
+    }
+
+    MPI_Gatherv(local_vk, nrows_vec[rank], MPI_DOUBLE, vk, &nrows_vec[0],\
+        &offsets[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     if(rank==0){
 
-        for (auto i: sort_indexes(eigs)) {
-          std::cout << eigs[i] << std::endl;
-          }
+        PrintMatrixFlat(vk, nrows, num_vec);
     }
 
     MPI_Finalize( ); 

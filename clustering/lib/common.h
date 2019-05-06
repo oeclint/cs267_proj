@@ -23,6 +23,7 @@ typedef double** Matrix;
 Matrix EmpMatrix(int rows, int cols);
 Matrix IdMatrix(int rows, int cols);
 void PrintMatrix(Matrix m, int rows, int cols);
+void PrintMatrixFlat(double *m, int rows, int cols);
 std::vector<size_t> sort_indexes(const std::vector<double> &v);
 //
 //  I/O routines
