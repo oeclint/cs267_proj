@@ -7,4 +7,6 @@ Makefile
 *.stdout
 serial
 parallel
+!serial/
+!parallel/
 core
