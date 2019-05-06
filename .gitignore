@@ -5,3 +5,6 @@ CMakeFiles/
 Makefile
 *.error
 *.stdout
+serial
+parallel
+core

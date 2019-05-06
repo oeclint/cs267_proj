@@ -1,7 +1,6 @@
+#include "common.h"
 #ifndef JACOBI
 #define JACOBI
-
-typedef double** Matrix;
 
 void SerialJacobi(Matrix mat, const int n, const double eps);
 void SerialJacobiV(Matrix mat, Matrix v, const int n, const double eps);

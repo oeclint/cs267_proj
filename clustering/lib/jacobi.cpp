@@ -117,14 +117,6 @@ void SerialJacobiRotateV(Matrix m, Matrix v, const int j, const int k, const int
   m[j][j] = c * c * tmp_mjj + 2 * s * c * tmp_mjk + s * s * m[k][k];
   m[k][k] = s * s * tmp_mjj - 2 * s * c * tmp_mjk + c * c * m[k][k];
 
-/*
-  double tmp_vjk = v[j][k];
-  double tmp_vkj = v[k][j];
-  v[j][k] = c * tmp_vjk - s * v[j][j];
-  v[k][j] = c * tmp_vkj + s * v[k][k];
-  v[j][j] = c * v[j][j] + s * tmp_vjk;
-  v[k][k] =  -s * tmp_vkj + c * v[k][k];
-*/
   double tmp_mjl;
   double tmp_vlj;
 
