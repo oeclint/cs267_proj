@@ -1,8 +1,6 @@
 #include "jacobi_serial.h"
-#include <unistd.h>
 #include <cstdio>
 #include <cmath>
-#include <iostream>
 
 struct Ind2D {
   Ind2D(int _i=0, int _j=0) {
@@ -84,14 +82,14 @@ void SerialJacobi(Matrix mat, Matrix v, const int n, const double eps) {
   ind_max = find_abs_max(mat, n);
   double norm = NormMatrix(mat, n);
   double tol = eps * norm;
-  printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
+//  printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
   while (norm > tol) {
     //printf("%f ", norm);
     SerialJacobiRotate(mat, v, ind_max.j, ind_max.k, n);
     norm = NormMatrix(mat, n);
     //PrintMatrix(mat, n);
     ind_max = find_abs_max(mat, n);
-    printf("eeps = %f, norm = %f, tol = %f\n",eps, norm, tol);
+//    printf("eps = %f, norm = %f, tol = %f\n",eps, norm, tol);
   }
 }
 

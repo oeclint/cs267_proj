@@ -7,6 +7,10 @@
 #include <time.h>
 #include <sys/time.h>
 #include "common.h"
+#include <iostream>
+#include <vector>
+#include <numeric>      // std::iota
+#include <algorithm>    // std::sort
 
 double calculate_similarity(std::pair<double, double> a, std::pair<double, double> b, double sig) {
     return exp(-1 * (pow(a.first - b.first, 2) + pow(a.second - b.second, 2)) / (2 * sig * sig));
@@ -35,13 +39,26 @@ Matrix IdMatrix(int rows, int cols){
   return matrix;
 }
 
-void PrintMatrix(Matrix m, int n) {
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+void PrintMatrix(Matrix m, int rows, int cols) {
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
       printf("%2.2f ", m[i][j]);
     }
     printf("\n");
   }
+}
+
+std::vector<size_t> sort_indexes(const std::vector<double> &v) {
+
+  // initialize original index locations
+  std::vector<size_t> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  std::sort(idx.begin(), idx.end(),
+       [&v](size_t i1, size_t i2) {return v[i1] > v[i2];});
+
+  return idx;
 }
 
 //

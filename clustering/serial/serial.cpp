@@ -62,13 +62,18 @@ int main(int argc, char **argv) {
 
     Eigen::EigenSolver<Eigen::MatrixXd> es(A, true);
     std::cout <<es.eigenvectors()<<std::endl;
-    PrintMatrix(v, size);
+    PrintMatrix(v, size, size);
     std::cout <<es.eigenvalues()<<std::endl;
 
+    std::vector<double> eigs;
     for(int i =0; i < size; i++){
-        std::cout << m[i][i] << std::endl;
-
+        eigs.push_back(m[i][i]);
     }
+
+    for (auto i: sort_indexes(eigs)) {
+        std::cout << eigs[i] << std::endl;
+    }
+
   return 0;
 }
 

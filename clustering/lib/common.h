@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
@@ -21,7 +22,8 @@ double calculate_similarity(std::pair<double, double> a, std::pair<double, doubl
 typedef double** Matrix;
 Matrix EmpMatrix(int rows, int cols);
 Matrix IdMatrix(int rows, int cols);
-void PrintMatrix(Matrix m, int n);
+void PrintMatrix(Matrix m, int rows, int cols);
+std::vector<size_t> sort_indexes(const std::vector<double> &v);
 //
 //  I/O routines
 //

@@ -10,3 +10,4 @@ parallel
 !serial/
 !parallel/
 core
+*.swp
